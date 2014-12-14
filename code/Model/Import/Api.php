@@ -226,8 +226,9 @@ class Danslo_ApiImport_Model_Import_Api
         $select = $this->_setup->getConnection()
             ->select()
             ->from($this->_setup->getTable('eav/attribute'))
+            ->where('entity_type_id = :entity_type_id')
             ->where('is_user_defined = 1');
-        $magAttributes = $this->_setup->getConnection()->fetchAssoc($select);
+        $magAttributes = $this->_setup->getConnection()->fetchAssoc($select, array('entity_type_id' => $this->_catalogProductEntityTypeId));
 
         foreach ($magAttributes as $magAttribute) {
 
