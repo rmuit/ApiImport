@@ -1,27 +1,11 @@
 <?php
 /**
- * Magento
+ * Entity Adapter for importing Magento Categories
  *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @category    Mage
- * @package     Mage_ImportExport
- * @copyright   Copyright (c) 2012 Magento Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * @category   Danslo
+ * @package    Danslo_ApiImport
+ * @license    http://opensource.org/licenses/osl-3.0.php Open Software Licence 3.0 (OSL-3.0)
+ * @author     Paul Hachmang <paul@h-o.nl>
  */
 
 class Danslo_ApiImport_Model_Import_Entity_Category
@@ -98,9 +82,9 @@ class Danslo_ApiImport_Model_Import_Entity_Category
     /**
      * Category entity DB table name.
      *
-     * @var string
+     * @var null|string
      */
-    protected $_entityTable;
+    protected $_entityTable = null;
 
     /**
      * Attributes with index (not label) value.
@@ -111,6 +95,13 @@ class Danslo_ApiImport_Model_Import_Entity_Category
         'default_sort_by',
         'available_sort_by'
     );
+
+    /**
+     * Default category attribute set id.
+     *
+     * @var null|int
+     */
+    protected $_defaultAttributeSetId = null;
 
     /**
      * Validation failure message template definitions
@@ -210,10 +201,33 @@ class Danslo_ApiImport_Model_Import_Entity_Category
              ->_initCategories()
              ->_initAttributes();
 
-        /* @var $categoryResource Mage_Catalog_Model_Resource_Category */
-        $categoryResource   = Mage::getModel('catalog/category')->getResource();
-        $this->_entityTable = $categoryResource->getEntityTable();
         $this->_dataSourceModel = Danslo_ApiImport_Model_Import::getDataSourceModel();
+    }
+
+    /**
+     * Gets the default attribute set id for categories.
+     *
+     * @return int
+     */
+    protected function _getDefaultAttributeSetId()
+    {
+        if ($this->_defaultAttributeSetId === null) {
+            $this->_defaultAttributeSetId = Mage::getSingleton('catalog/category')->getDefaultAttributeSetId();
+        }
+        return $this->_defaultAttributeSetId;
+    }
+
+    /**
+     * Gets the entity table.
+     *
+     * @return string
+     */
+    protected function _getEntityTable()
+    {
+        if ($this->_entityTable === null) {
+            $this->_entityTable = Mage::getSingleton('core/resource')->getTableName('catalog/category');
+        }
+        return $this->_entityTable;
     }
 
     /**
@@ -234,7 +248,7 @@ class Danslo_ApiImport_Model_Import_Entity_Category
             if ($idToDelete) {
                 $this->_connection->query(
                     $this->_connection->quoteInto(
-                        "DELETE FROM `{$this->_entityTable}` WHERE `entity_id` IN (?)", $idToDelete
+                        "DELETE FROM `{$this->_getEntityTable()}` WHERE `entity_id` IN (?)", $idToDelete
                     )
                 );
             }
@@ -410,7 +424,7 @@ class Danslo_ApiImport_Model_Import_Entity_Category
 
         if (self::SCOPE_DEFAULT == $this->getRowScope($rowData)) {
             $rowData['name'] = $this->_getCategoryName($rowData);
-            if (!$rowData['position']) {
+            if (!isset($rowData['position'])) {
                 $rowData['position'] = 10000;
             }
         }
@@ -454,7 +468,7 @@ class Danslo_ApiImport_Model_Import_Entity_Category
     protected function _saveCategories()
     {
         $strftimeFormat = Varien_Date::convertZendToStrftime(Varien_Date::DATETIME_INTERNAL_FORMAT, true, true);
-        $nextEntityId   = Mage::getResourceHelper('importexport')->getNextAutoincrement($this->_entityTable);
+        $nextEntityId   = Mage::getResourceHelper('importexport')->getNextAutoincrement($this->_getEntityTable());
         static $entityId;
 
         while ($bunch = $this->_dataSourceModel->getNextBunch()) {
@@ -496,7 +510,7 @@ class Danslo_ApiImport_Model_Import_Entity_Category
                         $entityRow['entity_id']        = $entityId;
                         $entityRow['path']             = $parentCategory['path'] .'/'.$entityId;
                         $entityRow['entity_type_id']   = $this->_entityTypeId;
-                        $entityRow['attribute_set_id'] = 0;
+                        $entityRow['attribute_set_id'] = $this->_getDefaultAttributeSetId();
                         $entityRowsIn[]                = $entityRow;
 
                         $this->_newCategory[$rowData[self::COL_ROOT]][$rowData[self::COL_CATEGORY]] = array(
@@ -605,6 +619,9 @@ class Danslo_ApiImport_Model_Import_Entity_Category
             if (!is_writable($destDir)) {
                 @mkdir($destDir, 0777, true);
             }
+            if (!file_exists($tmpDir)) {
+                @mkdir($tmpDir, 0777, true);
+            }
             if (!$this->_fileUploader->setTmpDir($tmpDir)) {
                 Mage::throwException("File directory '{$tmpDir}' is not readable.");
             }
@@ -643,11 +660,11 @@ class Danslo_ApiImport_Model_Import_Entity_Category
     protected function _saveCategoryEntity(array $entityRowsIn, array $entityRowsUp)
     {
         if ($entityRowsIn) {
-            $this->_connection->insertMultiple($this->_entityTable, $entityRowsIn);
+            $this->_connection->insertMultiple($this->_getEntityTable(), $entityRowsIn);
         }
         if ($entityRowsUp) {
             $this->_connection->insertOnDuplicate(
-                $this->_entityTable,
+                $this->_getEntityTable(),
                 $entityRowsUp,
                 array('parent_id', 'path', 'position', 'level','children_count')
             );
@@ -694,7 +711,7 @@ class Danslo_ApiImport_Model_Import_Entity_Category
      */
     public function getRowScope(array $rowData)
     {
-        if (strlen(trim($rowData[self::COL_CATEGORY]))) {
+        if (isset($rowData[self::COL_CATEGORY]) && strlen(trim($rowData[self::COL_CATEGORY]))) {
             return self::SCOPE_DEFAULT;
         } elseif (empty($rowData[self::COL_STORE])) {
             return self::SCOPE_NULL;

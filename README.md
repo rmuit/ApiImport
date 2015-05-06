@@ -26,7 +26,7 @@ Add something like the following to your ``composer.json``:
 ```json
 {
     "require": {
-        "danslo/api-import": "1.1.0"
+        "danslo/api-import": "1.1.*"
     },
     "extra": {
         "magento-root-dir": "htdocs/"
@@ -55,10 +55,14 @@ Afterwards, issue the ``composer install`` command.
 
 require_once 'app/Mage.php';
 
-Mage::init();
+Mage::init('admin');
 
 $api = Mage::getModel('api_import/import_api');
-$api->importEntities($anArrayWithYourEntities, $entityType, $optionalImportBehavior);
+try {
+    $api->importEntities($anArrayWithYourEntities, $entityType, $optionalImportBehavior);
+} catch (Exception $e) {
+    printf("%s: %s\n", $e->getMessage(), $e->getCustomMessage());
+}
 ```
 ### Access it through the Magento Webservices API (any SOAP/XMLRPC capable language)
 
@@ -67,7 +71,7 @@ $api->importEntities($anArrayWithYourEntities, $entityType, $optionalImportBehav
 
 require_once 'app/Mage.php';
 
-Mage::init();
+Mage::init('admin');
 
 // Get an XMLRPC client.
 $client = new Zend_XmlRpc_Client(
@@ -150,7 +154,7 @@ Just import using the BEHAVIOR_STOCK behavior. See an example below:
 
 require_once 'app/Mage.php';
 
-Mage::init();
+Mage::init('admin');
 
 $api = Mage::getModel('api_import/import_api');
 $api->importEntities(
