@@ -66,7 +66,8 @@ class Danslo_ApiImport_Model_Import_Api
         try {
             $result = $this->_api->importSource();
             $errorsCount = $this->_api->getErrorsCount();
-            if ($errorsCount > 0) {
+            if ($errorsCount > 0 && $behavior != Danslo_ApiImport_Model_Import::BEHAVIOR_STOCK) {
+// The exception for stock is a local modification - we have unknown products in our import.
                 Mage::throwException("There were {$errorsCount} errors during the import process." .
                     "Please be aware that valid entities were still imported.");
             };
