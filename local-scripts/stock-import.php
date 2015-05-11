@@ -6,6 +6,8 @@ $stock_file = '/home/users/klusxftp/voorraad/VRD791.csv';
 require_once 'app/Mage.php';
 
 Mage::init();
+//? $api = Mage::getModel('api_import/import_api');
+$api = new Danslo_ApiImport_Model_Import_Api();
 
 // Get EAN - SKU map.
 
